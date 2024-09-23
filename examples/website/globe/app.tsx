@@ -21,15 +21,11 @@ import {CSVLoader} from '@loaders.gl/csv';
 import AnimatedArcLayer from './animated-arc-group-layer';
 import RangeInput from './range-input';
 import type {GlobeViewState} from '@deck.gl/core';
+import { LinearInterpolator } from 'deck.gl';
+
 
 // Data source
 const DATA_URL = 'https://raw.githubusercontent.com/visgl/deck.gl-data/master/examples/globe';
-
-const INITIAL_VIEW_STATE: GlobeViewState = {
-  longitude: 0,
-  latitude: 20,
-  zoom: 0
-};
 
 const TIME_WINDOW = 900; // 15 minutes
 const EARTH_RADIUS_METERS = 6.3e6;
@@ -45,7 +41,7 @@ const sunLight = new SunLight({
   timestamp: 0
 });
 // create lighting effect with light sources
-const lightingEffect = new LightingEffect({ambientLight, sunLight});
+const lightingEffect = new LightingEffect({ambientLight});
 
 type Flight = {
   // Departure
@@ -119,14 +115,31 @@ export default function App({data}: {data?: DailyFlights[]}) {
         })
     );
 
+  const [initialViewState, setInitialViewState] = useState<GlobeViewState>({
+      longitude: 0,
+      latitude: 20,
+      zoom: 0
+    });
+
+    const rotateCamera = useCallback(() => {
+      setInitialViewState(viewState => ({
+        ...viewState,
+        longitude: viewState.longitude + 25,
+        transitionDuration: 1200,
+        transitionInterpolator: new LinearInterpolator(['longitude']),
+        onTransitionEnd: rotateCamera
+      })); 
+    }, []);
+
   return (
     <>
       <DeckGL
         views={new GlobeView()}
-        initialViewState={INITIAL_VIEW_STATE}
+        initialViewState={initialViewState}
         controller={true}
         effects={[lightingEffect]}
         layers={[backgroundLayers, dataLayers]}
+        onLoad={rotateCamera}
       />
       {data && (
         <RangeInput
